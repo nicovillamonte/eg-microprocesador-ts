@@ -1,11 +1,40 @@
+import { SystemError } from '../errors/system.error';
 import { byte, toByte } from '../types/byte.type';
 import { Instruction } from './instruction';
+import { ProgramIterator } from './program-iterator';
 
 export interface MicroProcessor {
   /**
-   * programacion: carga y ejecuta un conjunto de instrucciones en memoria
+   * carga el programa en memoria, el microcontrolador debe estar detenido
+   */
+  loadProgram(program: Array<byte>): void;
+
+  // control de programa
+  /**
+   * Ejecuta un programa cargado en memoria
    */
   run(program: Instruction[]): void;
+
+  /**
+   * Borra la memoria de datos y comienza la ejecucion del programa cargado
+   * actualmente
+   */
+  start(): void;
+
+  /**
+   * Detiene el programa en ejecucion
+   */
+  stop(): void;
+
+  /**
+   * Ejecuta la siguiente instruccion del programa actual
+   */
+  step(): Instruction;
+
+  /**
+   * Inicializa el microcontrolador
+   */
+  reset(): void;
 
   /**
    * Getters y setters de acumuladores A y B
@@ -19,8 +48,6 @@ export interface MicroProcessor {
   advanceProgram(): void;
   programCounter: byte;
 
-  reset(): void;
-
   /**
    * Manejo de dirección de memoria de datos: getter y setter
    */
@@ -31,14 +58,46 @@ export interface MicroProcessor {
 }
 
 export class MicroProcessorImpl implements MicroProcessor {
-  run(program: Instruction[]): void {
-    program.forEach((instruction) => instruction.execute(this));
-  }
-
   aAcumulator: byte = toByte(0);
   bAcumulator: byte = toByte(0);
   programCounter: byte = toByte(0);
   data = new Map<number, byte>();
+
+  programStarted = false;
+  programIterator!: ProgramIterator;
+
+  loadProgram(program: byte[]): void {
+    if (this.programStarted)
+      throw new SystemError('Ya hay un programa en ejecución');
+    this.reset();
+    this.programIterator = new ProgramIterator(program);
+  }
+
+  start(): void {
+    this.programStarted = true;
+  }
+
+  stop(): void {
+    this.programStarted = false;
+  }
+
+  step(): Instruction {
+    if (!this.programStarted)
+      throw new SystemError('El programa no está iniciado');
+    if (!this.programIterator.hasNext())
+      throw new SystemError('No hay más instrucciones para ejecutar');
+    const nextInstruction = this.programIterator.next();
+    nextInstruction.execute(this);
+    return nextInstruction;
+  }
+
+  run() {
+    this.start();
+    while (this.programIterator.hasNext()) {
+      this.step();
+    }
+    this.stop();
+  }
 
   advanceProgram(): void {
     this.programCounter = toByte(this.programCounter + 1); // Ver si dar error o empezar del 0

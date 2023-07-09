@@ -1,5 +1,6 @@
 import { byte, toByte } from '../types/byte.type';
 import { MicroProcessor } from './microprocessor';
+import { ProgramIterator } from './program-iterator';
 
 export abstract class Instruction {
   microBefore!: MicroProcessor;
@@ -15,6 +16,13 @@ export abstract class Instruction {
   undo(micro: MicroProcessor) {
     micro.copyFrom(this.microBefore);
   }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-empty-function
+  prepare(programIterator: ProgramIterator) {}
+
+  clone(): Instruction {
+    return Object.create(this);
+  }
 }
 
 export class NOP extends Instruction {
@@ -25,13 +33,17 @@ export class NOP extends Instruction {
 }
 
 export class LODV extends Instruction {
-  constructor(public readonly value: byte | number) {
+  constructor(public value: byte | number) {
     toByte(value); // Verificamos si es un byte válido antes de crear la instrucció
     super();
   }
 
   doExecute(micro: MicroProcessor): void {
     micro.aAcumulator = toByte(this.value);
+  }
+
+  prepare(programIterator: ProgramIterator): void {
+    this.value = programIterator.nextValue();
   }
 }
 
@@ -60,63 +72,5 @@ export class ADD extends Instruction {
 
     micro.aAcumulator = toByte(aAcumulator);
     micro.bAcumulator = toByte(bAcumulator);
-  }
-}
-
-abstract class CompoundNotZeroInstruction extends Instruction {
-  constructor(public readonly instructions: Instruction[]) {
-    super();
-  }
-
-  doExecute(micro: MicroProcessor): void {
-    micro.run(this.instructions);
-  }
-
-  notZero(micro: MicroProcessor): boolean {
-    return micro.aAcumulator !== toByte(0);
-  }
-}
-
-export class IFNZ extends CompoundNotZeroInstruction {
-  doExecute(micro: MicroProcessor): void {
-    if (this.notZero(micro)) {
-      super.doExecute(micro);
-    }
-  }
-}
-
-export class WHNZ extends CompoundNotZeroInstruction {
-  doExecute(micro: MicroProcessor): void {
-    while (this.notZero(micro)) {
-      super.doExecute(micro);
-    }
-  }
-}
-
-// Instrucciones para testear el while
-export class STR extends Instruction {
-  constructor(public readonly address: number) {
-    super();
-  }
-
-  doExecute(micro: MicroProcessor): void {
-    micro.setData(this.address, micro.aAcumulator);
-  }
-}
-
-export class LOD extends Instruction {
-  constructor(public readonly address: number) {
-    super();
-  }
-
-  doExecute(micro: MicroProcessor): void {
-    micro.aAcumulator = micro.getData(this.address);
-  }
-}
-
-export class SUB extends Instruction {
-  doExecute(micro: MicroProcessor): void {
-    micro.aAcumulator = toByte(micro.aAcumulator - micro.bAcumulator);
-    micro.bAcumulator = toByte(0);
   }
 }
