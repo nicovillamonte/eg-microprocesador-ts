@@ -3,7 +3,7 @@
 Esta es una implementación del ejemplo de Microprocesador implementado en NestJS con TypeScript.
 Solamente es una traducción de lenguaje del [ejemplo de Microprocesador del docente Fernando Dodino](https://github.com/uqbar-project/eg-microprocesador-kotlin) desarrollado en kotlin.
 
-### Branch master
+### Branch main
 Está basado en [esta explicación](https://docs.google.com/document/d/1-esJOhKb_yAABls-XdRrEYHzCv4yn-qqFtCu3xpgCg0/edit)
 
 ## Ejecución
